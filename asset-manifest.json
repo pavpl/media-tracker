@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/media-tracker/static/js/main.4fb815ab.js",
+    "index.html": "/media-tracker/index.html",
+    "main.4fb815ab.js.map": "/media-tracker/static/js/main.4fb815ab.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.4fb815ab.js"
+  ]
+}
