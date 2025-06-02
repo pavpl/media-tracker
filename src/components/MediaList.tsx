@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
-import { db } from '../config/firebase.ts';
+import { db } from '../config/firebase';
 import { 
   List, 
   ListItem, 
@@ -27,10 +27,16 @@ import {
   Fade,
   Chip,
   Tooltip,
-  Grid
+  Grid,
+  CardMedia
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
+import { AddMediaForm } from './AddMediaForm';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
 interface MediaItem {
   id: string;
@@ -43,6 +49,7 @@ interface MediaItem {
   favorite?: boolean;
   createdAt?: string;
   rating?: number;
+  imageUrl?: string;
 }
 
 interface MediaListProps {
@@ -51,19 +58,13 @@ interface MediaListProps {
 
 export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
   const [items, setItems] = useState<MediaItem[]>([]);
-  const [newTitle, setNewTitle] = useState('');
-  const [newType, setNewType] = useState('');
-  const [newTags, setNewTags] = useState('');
-  const [newStatus, setNewStatus] = useState('planned');
-  const [newDate, setNewDate] = useState('');
-  const [newFavorite, setNewFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [filterRating, setFilterRating] = useState<number | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchItems();
@@ -88,30 +89,15 @@ export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
     }
   };
 
-  const addItem = async () => {
-    if (!newTitle.trim() || !newType.trim()) {
-      setError('Пожалуйста, заполните все поля');
-      return;
-    }
-
+  const handleAddMedia = async (data: any) => {
     try {
       setLoading(true);
       await addDoc(collection(db, 'media'), {
-        title: newTitle.trim(),
-        type: newType.trim(),
-        tags: newTags.split(',').map(tag => tag.trim()).filter(Boolean),
+        ...data,
         userId,
-        status: newStatus,
-        watchedDate: newDate || null,
-        favorite: newFavorite,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        status: 'planned',
       });
-      setNewTitle('');
-      setNewType('');
-      setNewTags('');
-      setNewStatus('planned');
-      setNewDate('');
-      setNewFavorite(false);
       await fetchItems();
     } catch (err) {
       setError('Ошибка при добавлении элемента');
@@ -134,11 +120,8 @@ export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
     }
   };
 
-  const allTags = Array.from(new Set(items.flatMap(i => i.tags || [])));
-
   const filteredItems = items.filter(item => {
     if (search && !item.title.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterTag && !(item.tags || []).includes(filterTag)) return false;
     if (filterStatus && item.status !== filterStatus) return false;
     if (filterRating !== null && (typeof item.rating !== 'number' || item.rating < filterRating)) return false;
     return true;
@@ -146,20 +129,12 @@ export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
 
   return (
     <Box sx={{ maxWidth: 900, margin: '0 auto', padding: 2 }}>
-      <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+      <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
         <TextField
           label="Поиск по названию"
           value={search}
           onChange={e => setSearch(e.target.value)}
           sx={{ minWidth: 180 }}
-        />
-        <Autocomplete
-          options={allTags}
-          value={filterTag}
-          onChange={(_, v) => setFilterTag(v)}
-          renderInput={params => <TextField {...params} label="Тег" />}
-          sx={{ minWidth: 140 }}
-          clearOnEscape
         />
         <FormControl sx={{ minWidth: 140 }}>
           <InputLabel id="filter-status-label">Статус</InputLabel>
@@ -190,37 +165,33 @@ export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
           />
           <Button size="small" onClick={() => setFilterRating(null)} sx={{ ml: 1 }}>Сбросить</Button>
         </Box>
+        <Button variant="contained" color="primary" sx={{ ml: 'auto' }} onClick={() => setAddDialogOpen(true)}>
+          Добавить фильм
+        </Button>
       </Box>
 
-      <Card sx={{ mb: 3, p: 2, boxShadow: 2 }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-            <TextField label="Название" value={newTitle} onChange={e => setNewTitle(e.target.value)} sx={{ minWidth: 160 }} error={!newTitle.trim() && newTitle !== ''} helperText={!newTitle.trim() && newTitle !== '' ? 'Название не может быть пустым' : ''} />
-            <TextField label="Тип" value={newType} onChange={e => setNewType(e.target.value)} sx={{ minWidth: 120 }} error={!newType.trim() && newType !== ''} helperText={!newType.trim() && newType !== '' ? 'Тип не может быть пустым' : ''} />
-            <TextField label="Теги (через запятую)" value={newTags} onChange={e => setNewTags(e.target.value)} sx={{ minWidth: 140 }} placeholder="драма, комедия, 2024" />
-            <FormControl sx={{ minWidth: 120 }}>
-              <InputLabel id="status-label">Статус</InputLabel>
-              <Select labelId="status-label" value={newStatus} label="Статус" onChange={e => setNewStatus(e.target.value)}>
-                <MenuItem value="planned">Запланировано</MenuItem>
-                <MenuItem value="watching">Смотрю</MenuItem>
-                <MenuItem value="completed">Просмотрено</MenuItem>
-                <MenuItem value="dropped">Брошено</MenuItem>
-              </Select>
-            </FormControl>
-            <TextField label="Дата просмотра" type="date" value={newDate} onChange={e => setNewDate(e.target.value)} InputLabelProps={{ shrink: true }} sx={{ minWidth: 140 }} />
-            <FormControlLabel control={<Checkbox checked={newFavorite} onChange={e => setNewFavorite(e.target.checked)} />} label="Избранное" />
-            <Button variant="contained" color="primary" onClick={addItem} disabled={loading || !newTitle.trim() || !newType.trim()} sx={{ height: 56, fontWeight: 700, fontSize: 16 }}>
-              {loading ? <CircularProgress size={24} /> : 'Добавить'}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+      <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Добавить фильм</DialogTitle>
+        <DialogContent>
+          <AddMediaForm onSubmit={async (data) => { await handleAddMedia(data); setAddDialogOpen(false); }} type="movie" />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddDialogOpen(false)}>Отмена</Button>
+        </DialogActions>
+      </Dialog>
 
       <Grid container spacing={2}>
         {filteredItems.map((item) => (
           <Grid item xs={12} sm={6} md={4} key={item.id}>
             <Fade in timeout={500}>
               <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', boxShadow: 3, position: 'relative', cursor: 'pointer', transition: 'box-shadow 0.2s', '&:hover': { boxShadow: 8 } }} onClick={() => navigate(`/media/${item.id}`)}>
+                <CardMedia
+                  component="img"
+                  height="200"
+                  image={item.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'}
+                  alt={item.title}
+                  sx={{ objectFit: 'cover' }}
+                />
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>{item.title}</Typography>
@@ -262,7 +233,7 @@ export const MediaList: React.FC<MediaListProps> = ({ userId }) => {
   );
 };
 
-function statusLabel(status) {
+function statusLabel(status: string): string {
   switch (status) {
     case 'planned': return 'Запланировано';
     case 'watching': return 'Смотрю';
@@ -272,7 +243,7 @@ function statusLabel(status) {
   }
 }
 
-function statusColor(status) {
+function statusColor(status: string): 'default' | 'info' | 'success' | 'error' {
   switch (status) {
     case 'planned': return 'default';
     case 'watching': return 'info';

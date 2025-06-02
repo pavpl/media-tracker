@@ -1,5 +1,18 @@
-import React, { useState } from 'react';
-import { TextField, Button, Box, Rating, Chip, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material';
+import React, { useState, useEffect } from 'react';
+import { 
+  TextField, 
+  Button, 
+  Box, 
+  Rating, 
+  Chip, 
+  Typography,
+  Autocomplete,
+  CircularProgress,
+  Card,
+  CardMedia,
+  CardContent
+} from '@mui/material';
+import { tmdbService, TMDBMedia } from '../services/tmdbService';
 
 interface AddMediaFormProps {
   onSubmit: (data: MediaFormData) => void;
@@ -13,9 +26,10 @@ interface MediaFormData {
   tags: string[];
   imageUrl: string;
   type: 'movie' | 'game' | 'book';
+  tmdbId?: number;
 }
 
-const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
+export const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
   const [formData, setFormData] = useState<MediaFormData>({
     title: '',
     description: '',
@@ -25,6 +39,43 @@ const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
     type
   });
   const [currentTag, setCurrentTag] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<TMDBMedia[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
+
+  useEffect(() => {
+    const searchMedia = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const response = await tmdbService.searchMedia(searchQuery);
+        setSearchResults(response.results);
+      } catch (error) {
+        console.error('Error searching media:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const timeoutId = setTimeout(searchMedia, 500);
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const handleMediaSelect = (media: TMDBMedia) => {
+    setSelectedMedia(media);
+    setFormData({
+      ...formData,
+      title: media.media_type === 'movie' ? media.title : media.name,
+      description: media.overview,
+      imageUrl: tmdbService.getPosterUrl(media.poster_path),
+      tmdbId: media.id
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +104,65 @@ const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
       <Typography variant="h5" gutterBottom>
         Добавить {type === 'movie' ? 'фильм' : type === 'game' ? 'игру' : 'книгу'}
       </Typography>
+
+      {type === 'movie' && (
+        <Box sx={{ mb: 3 }}>
+          <Autocomplete
+            freeSolo
+            options={searchResults}
+            getOptionLabel={(option) => 
+              typeof option === 'string' 
+                ? option 
+                : option.media_type === 'movie' 
+                  ? option.title 
+                  : option.name
+            }
+            loading={loading}
+            inputValue={searchQuery}
+            onInputChange={(_, newValue) => setSearchQuery(newValue)}
+            onChange={(_, value) => {
+              if (value && typeof value !== 'string') {
+                handleMediaSelect(value);
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Поиск фильма"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <>
+                      {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                      {params.InputProps.endAdornment}
+                    </>
+                  ),
+                }}
+              />
+            )}
+            renderOption={(props, option) => (
+              <Box component="li" {...props}>
+                <Card sx={{ display: 'flex', width: '100%' }}>
+                  <CardMedia
+                    component="img"
+                    sx={{ width: 100 }}
+                    image={tmdbService.getPosterUrl(option.poster_path, 'w92')}
+                    alt={option.media_type === 'movie' ? option.title : option.name}
+                  />
+                  <CardContent>
+                    <Typography variant="subtitle1">
+                      {option.media_type === 'movie' ? option.title : option.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {option.media_type === 'movie' ? 'Фильм' : 'Сериал'}
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </Box>
+            )}
+          />
+        </Box>
+      )}
       
       <TextField
         fullWidth
@@ -87,27 +197,11 @@ const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
         <Typography component="legend">Оценка</Typography>
         <Rating
           value={formData.rating}
+          max={10}
           onChange={(_, newValue) => {
             setFormData({ ...formData, rating: newValue || 0 });
           }}
         />
-      </Box>
-
-      <Box sx={{ my: 2 }}>
-        <TextField
-          label="Добавить тег"
-          value={currentTag}
-          onChange={(e) => setCurrentTag(e.target.value)}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAddTag();
-            }
-          }}
-        />
-        <Button onClick={handleAddTag} sx={{ ml: 1 }}>
-          Добавить
-        </Button>
       </Box>
 
       <Box sx={{ my: 2 }}>
@@ -132,6 +226,4 @@ const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) => {
       </Button>
     </Box>
   );
-};
-
-export default AddMediaForm; 
+}; 

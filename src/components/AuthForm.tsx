@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TextField, Button, Box, Typography, Alert } from '@mui/material';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../config/firebase.ts';
+import { auth } from '../config/firebase';
 import GoogleIcon from '@mui/icons-material/Google';
 
 interface AuthFormProps {

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { db } from '../config/firebase.ts';
-import { Box, Typography, Chip, TextField, Button, Rating, CircularProgress, Alert, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, IconButton } from '@mui/material';
+import { db } from '../config/firebase';
+import { Box, Typography, Chip, TextField, Button, Rating, CircularProgress, Alert, Stack, FormControl, InputLabel, Select, MenuItem, Checkbox, FormControlLabel, IconButton, Card, CardMedia, Grid } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
@@ -18,6 +18,8 @@ interface MediaItem {
   watchedDate?: string;
   favorite?: boolean;
   createdAt?: string;
+  imageUrl?: string;
+  description?: string;
 }
 
 export const MediaDetails: React.FC = () => {
@@ -93,7 +95,7 @@ export const MediaDetails: React.FC = () => {
     }
   };
 
-  const handleUpdateField = async (field, value) => {
+  const handleUpdateField = async (field: string, value: any) => {
     if (!item) return;
     setSaving(true);
     try {
@@ -152,109 +154,139 @@ export const MediaDetails: React.FC = () => {
   if (!item) return null;
 
   return (
-    <Box sx={{ maxWidth: 600, margin: '0 auto', mt: 4 }}>
+    <Box sx={{ maxWidth: 800, margin: '0 auto', mt: 4 }}>
       <Button variant="outlined" onClick={() => navigate(-1)} sx={{ mb: 2 }}>Назад</Button>
-      <Typography variant="h5" gutterBottom>{item.title}</Typography>
-      <Typography color="text.secondary" gutterBottom>{item.type}</Typography>
-      <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-        {item.tags && item.tags.map(tag => (
-          <Chip key={tag} label={tag} size="small" />
-        ))}
-      </Stack>
-      <Box sx={{ mb: 2 }}>
-        <Typography>Ваша оценка:</Typography>
-        <Rating
-          name="media-rating"
-          value={rating}
-          onChange={(_, value) => handleSetRating(value)}
-          max={10}
-          disabled={saving}
-        />
-      </Box>
-      <Box sx={{ mb: 2 }}>
-        <FormControl sx={{ mr: 2, minWidth: 120 }}>
-          <InputLabel id="status-label">Статус</InputLabel>
-          <Select
-            labelId="status-label"
-            value={status}
-            label="Статус"
-            onChange={e => handleUpdateField('status', e.target.value)}
-            disabled={saving}
-          >
-            <MenuItem value="planned">Запланировано</MenuItem>
-            <MenuItem value="watching">Смотрю</MenuItem>
-            <MenuItem value="completed">Просмотрено</MenuItem>
-            <MenuItem value="dropped">Брошено</MenuItem>
-          </Select>
-        </FormControl>
-        <TextField
-          label="Дата просмотра"
-          type="date"
-          value={watchedDate}
-          onChange={e => handleUpdateField('watchedDate', e.target.value)}
-          sx={{ mr: 2 }}
-          InputLabelProps={{ shrink: true }}
-          disabled={saving}
-        />
-        <FormControlLabel
-          control={<Checkbox checked={favorite} onChange={e => handleUpdateField('favorite', e.target.checked)} disabled={saving} />}
-          label="Избранное"
-        />
-        {item.createdAt && (
-          <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
-            Добавлено: {new Date(item.createdAt).toLocaleString()}
-          </Typography>
-        )}
-      </Box>
-      <Box sx={{ mb: 2 }}>
-        <Typography>Комментарии / заметки:</Typography>
-        <Stack spacing={1} sx={{ mt: 1, mb: 1 }}>
-          {(item.comments || []).map((c, idx) => (
-            <Box key={idx} sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1, display: 'flex', alignItems: 'center' }}>
-              {editIndex === idx ? (
-                <>
-                  <TextField
-                    value={editText}
-                    onChange={e => setEditText(e.target.value)}
-                    size="small"
-                    fullWidth
-                    sx={{ mr: 1 }}
-                  />
-                  <Button onClick={handleSaveEdit} disabled={saving || !editText.trim()} size="small">Сохранить</Button>
-                  <Button onClick={() => { setEditIndex(null); setEditText(''); }} size="small">Отмена</Button>
-                </>
-              ) : (
-                <>
-                  <Box sx={{ flexGrow: 1 }}>
-                    <Typography variant="body2">{c.text}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(c.created).toLocaleString()}
-                    </Typography>
-                  </Box>
-                  <IconButton onClick={() => handleEditComment(idx, c.text)} size="small" sx={{ ml: 1 }} disabled={saving}>
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton onClick={() => handleDeleteComment(idx)} size="small" sx={{ ml: 1 }} disabled={saving}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </>
-              )}
-            </Box>
-          ))}
-        </Stack>
-        <TextField
-          label="Добавить комментарий или заметку"
-          value={comment}
-          onChange={e => setComment(e.target.value)}
-          fullWidth
-          multiline
-          minRows={2}
-          sx={{ mb: 1 }}
-        />
-        <Button variant="contained" onClick={handleAddComment} disabled={saving || !comment.trim()}>
-          Добавить
-        </Button>
-      </Box>
+      
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Card sx={{ height: '100%' }}>
+            <CardMedia
+              component="img"
+              image={item.imageUrl || 'https://via.placeholder.com/300x450?text=No+Image'}
+              alt={item.title}
+              sx={{ height: '100%', objectFit: 'cover' }}
+            />
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={8}>
+          <Typography variant="h5" gutterBottom>{item.title}</Typography>
+          <Typography color="text.secondary" gutterBottom>{item.type}</Typography>
+          
+          {item.description && (
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              {item.description}
+            </Typography>
+          )}
+          
+          <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+            {item.tags && item.tags.map(tag => (
+              <Chip key={tag} label={tag} size="small" />
+            ))}
+          </Stack>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography>Ваша оценка:</Typography>
+            <Rating
+              name="media-rating"
+              value={rating}
+              onChange={(_, value) => handleSetRating(value)}
+              max={10}
+              disabled={saving}
+            />
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <FormControl sx={{ mr: 2, minWidth: 120 }}>
+              <InputLabel id="status-label">Статус</InputLabel>
+              <Select
+                labelId="status-label"
+                value={status}
+                label="Статус"
+                onChange={e => handleUpdateField('status', e.target.value)}
+                disabled={saving}
+              >
+                <MenuItem value="planned">Запланировано</MenuItem>
+                <MenuItem value="watching">Смотрю</MenuItem>
+                <MenuItem value="completed">Просмотрено</MenuItem>
+                <MenuItem value="dropped">Брошено</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Дата просмотра"
+              type="date"
+              value={watchedDate}
+              onChange={e => handleUpdateField('watchedDate', e.target.value)}
+              sx={{ mr: 2 }}
+              InputLabelProps={{ shrink: true }}
+              disabled={saving}
+            />
+
+            <FormControlLabel
+              control={<Checkbox checked={favorite} onChange={e => handleUpdateField('favorite', e.target.checked)} disabled={saving} />}
+              label="Избранное"
+            />
+
+            {item.createdAt && (
+              <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                Добавлено: {new Date(item.createdAt).toLocaleString()}
+              </Typography>
+            )}
+          </Box>
+
+          <Box sx={{ mb: 2 }}>
+            <Typography>Комментарии / заметки:</Typography>
+            <Stack spacing={1} sx={{ mt: 1, mb: 1 }}>
+              {(item.comments || []).map((c, idx) => (
+                <Box key={idx} sx={{ p: 1, bgcolor: '#f5f5f5', borderRadius: 1, display: 'flex', alignItems: 'center' }}>
+                  {editIndex === idx ? (
+                    <>
+                      <TextField
+                        value={editText}
+                        onChange={e => setEditText(e.target.value)}
+                        size="small"
+                        fullWidth
+                        sx={{ mr: 1 }}
+                      />
+                      <Button onClick={handleSaveEdit} disabled={saving || !editText.trim()} size="small">Сохранить</Button>
+                      <Button onClick={() => { setEditIndex(null); setEditText(''); }} size="small">Отмена</Button>
+                    </>
+                  ) : (
+                    <>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="body2">{c.text}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(c.created).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <IconButton onClick={() => handleEditComment(idx, c.text)} size="small" sx={{ ml: 1 }} disabled={saving}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton onClick={() => handleDeleteComment(idx)} size="small" sx={{ ml: 1 }} disabled={saving}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </>
+                  )}
+                </Box>
+              ))}
+            </Stack>
+
+            <TextField
+              label="Добавить комментарий или заметку"
+              value={comment}
+              onChange={e => setComment(e.target.value)}
+              fullWidth
+              multiline
+              minRows={2}
+              sx={{ mb: 1 }}
+            />
+            <Button variant="contained" onClick={handleAddComment} disabled={saving || !comment.trim()}>
+              Добавить
+            </Button>
+          </Box>
+        </Grid>
+      </Grid>
     </Box>
   );
 }; 

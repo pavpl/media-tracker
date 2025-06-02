@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Typography, CssBaseline, Button, Box, AppBar, Toolbar, IconButton, Chip, CircularProgress, Card, CardContent } from '@mui/material';
-import { MediaList } from './components/MediaList.tsx';
-import { AuthForm } from './components/AuthForm.tsx';
+import { MediaList } from './components/MediaList';
+import { AuthForm } from './components/AuthForm';
 import { onAuthStateChanged, signOut, User, updateProfile, updatePassword, EmailAuthProvider, reauthenticateWithCredential, deleteUser, GoogleAuthProvider, linkWithPopup, unlink } from 'firebase/auth';
-import { auth } from './config/firebase.ts';
+import { auth } from './config/firebase';
 import { Routes, Route } from 'react-router-dom';
-import { MediaDetails } from './components/MediaDetails.tsx';
+import { MediaDetails } from './components/MediaDetails';
 import { useTheme } from '@mui/material/styles';
 import { Brightness4, Brightness7 } from '@mui/icons-material';
-import { useColorMode } from './theme.tsx';
+import { useColorMode } from './theme';
 import Avatar from '@mui/material/Avatar';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -22,7 +22,7 @@ import Snackbar from '@mui/material/Snackbar';
 import MuiAlert from '@mui/material/Alert';
 import GoogleIcon from '@mui/icons-material/Google';
 import { doc as firestoreDoc, getDoc as firestoreGetDoc, collection, getDocs, setDoc, deleteDoc, query, where, updateDoc } from 'firebase/firestore';
-import { db } from './config/firebase.ts';
+import { db } from './config/firebase';
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -69,7 +69,7 @@ function App() {
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             Медиа Трекер
           </Typography>
-          <Chip label="beta 0.1" color="info" size="small" sx={{ ml: 2, fontWeight: 600, letterSpacing: 1, fontSize: 14 }} />
+          <Chip label="beta 0.2" color="info" size="small" sx={{ ml: 2, fontWeight: 600, letterSpacing: 1, fontSize: 14 }} />
           <Box sx={{ flexGrow: 1 }} />
           <IconButton sx={{ ml: 1 }} onClick={colorMode.toggleColorMode} color="inherit">
             {theme.palette.mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
