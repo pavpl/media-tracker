@@ -14,7 +14,7 @@ import {
   unlink,
 } from 'firebase/auth';
 import { collection, deleteDoc, doc as firestoreDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
-import { auth, db } from './config/firebase';
+import { auth, db, firebaseInitError } from './config/firebase';
 import { MediaList } from './components/MediaList';
 import { AuthForm } from './components/AuthForm';
 import { MediaDetails } from './components/MediaDetails';
@@ -40,6 +40,7 @@ function App() {
   }, [isDark]);
 
   useEffect(() => {
+    if (firebaseInitError) return;
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser);
       setLoading(false);
@@ -48,6 +49,7 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (firebaseInitError) return;
     if (!user) return;
     const syncUser = async () => {
       await setDoc(
@@ -70,7 +72,39 @@ function App() {
     return '?';
   }, [user]);
 
-  if (loading) return null;
+  if (firebaseInitError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+        <div className="w-full max-w-xl bg-surface-container-low rounded-xl p-6 md:p-8 shadow-2xl border border-white/5">
+          <div className="flex items-start gap-3 mb-4">
+            <span className="material-symbols-outlined text-error" style={{ fontSize: 28 }}>
+              error
+            </span>
+            <div>
+              <h1 className="text-2xl font-headline font-extrabold mb-1">Ошибка Firebase</h1>
+              <p className="text-on-surface-variant text-sm">{firebaseInitError.message}</p>
+            </div>
+          </div>
+          <p className="text-on-surface-variant text-sm">
+            Проверь переменные окружения в файле{' '}
+            <code className="px-2 py-1 bg-surface-container-highest rounded">{'.env.local'}</code>. Для CRA они должны
+            начинаться с <code className="px-2 py-1 bg-surface-container-highest rounded">REACT_APP_</code>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 z-[999] flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="inline-block animate-spin rounded-full border-4 border-primary/30 border-t-primary w-12 h-12" />
+          <div className="text-on-surface-variant text-sm">Загрузка...</div>
+        </div>
+      </div>
+    );
+  }
   if (!user) return <AuthForm onAuth={setUser} />;
 
   return (

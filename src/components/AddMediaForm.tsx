@@ -32,6 +32,7 @@ export const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<TMDBMedia[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedMedia, setSelectedMedia] = useState<TMDBMedia | null>(null);
 
   const statusOptions = useMemo(
@@ -49,14 +50,19 @@ export const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) =>
     const searchMedia = async () => {
       if (searchQuery.trim().length < 2) {
         setSearchResults([]);
+        setSearchError(null);
         return;
       }
       setLoading(true);
+      setSearchError(null);
       try {
         const response = await tmdbService.searchMedia(searchQuery.trim());
         setSearchResults(response.results);
       } catch (e) {
+        const message = e instanceof Error ? e.message : 'Ошибка поиска TMDB';
         console.error('Error searching media:', e);
+        setSearchError(message);
+        setSearchResults([]);
       } finally {
         setLoading(false);
       }
@@ -139,6 +145,12 @@ export const AddMediaForm: React.FC<AddMediaFormProps> = ({ onSubmit, type }) =>
           </div>
         )}
       </div>
+
+      {searchError && (
+        <div className="bg-error-container/10 border-l-4 border-error p-3 rounded-r-xl text-on-error-container text-sm">
+          {searchError}
+        </div>
+      )}
 
       {/* Pre-filled Preview Section */}
       {selectedMedia && (

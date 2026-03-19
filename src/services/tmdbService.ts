@@ -30,6 +30,10 @@ export interface TMDBResponse {
 
 class TMDBService {
   private async fetchTMDB<T>(endpoint: string, params: Record<string, string> = {}): Promise<T> {
+    if (!TMDB_CONFIG.apiKey) {
+      throw new Error('TMDB apiKey is missing (REACT_APP_TMDB_API_KEY). Add it to .env.local and restart dev server.');
+    }
+
     const queryParams = new URLSearchParams();
     queryParams.append('api_key', TMDB_CONFIG.apiKey || '');
     queryParams.append('language', TMDB_CONFIG.language);
@@ -43,7 +47,24 @@ class TMDBService {
     );
 
     if (!response.ok) {
-      throw new Error(`TMDB API error: ${response.statusText}`);
+      // TMDB обычно возвращает JSON вида:
+      // { status_code: 7, status_message: 'Invalid API key...' }
+      let details = '';
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            const json = JSON.parse(text) as { status_message?: string; message?: string };
+            details = json.status_message || json.message || text;
+          } catch {
+            details = text;
+          }
+        }
+      } catch {
+        // ignore
+      }
+      const statusPart = `${response.status}${response.statusText ? ` ${response.statusText}` : ''}`;
+      throw new Error(`TMDB API error: ${statusPart}${details ? ` - ${details}` : ''}`);
     }
 
     return response.json();
